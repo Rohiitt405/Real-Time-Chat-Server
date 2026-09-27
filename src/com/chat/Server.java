@@ -15,11 +15,13 @@ public class Server {
             System.out.println("Chat server started...");
             System.out.println("Listening on port: " + PORT);
 
+            ChatRoom chatRoom = new ChatRoom();
+
             while (true) {
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("Client connected!");
 
-                ClientHandler clientHandler = new ClientHandler(clientSocket);
+                ClientHandler clientHandler = new ClientHandler(clientSocket, chatRoom);
 
                 Thread thread = new Thread(clientHandler);
                 thread.start();
