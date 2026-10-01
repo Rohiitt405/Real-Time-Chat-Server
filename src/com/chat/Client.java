@@ -29,7 +29,14 @@ public class Client {
         ) {
 
             System.out.println("Connected to server!");
-            System.out.println("Type your message: ");
+
+            String usernamePrompt = serverReader.readLine();
+            System.out.println(usernamePrompt);
+
+            String username = consoleReader.readLine();
+            writer.println(username);
+
+            System.out.println("You can now start chatting.");
             System.out.println("Type 'exit' to leave.");
 
             Thread receiverThread = new Thread(() -> {
@@ -39,7 +46,7 @@ public class Client {
 
                     while ((message = serverReader.readLine()) != null) {
                         System.out.println("\n" + message);
-                        System.out.println("> ");
+                        System.out.print("> ");
                     }
                 } catch (IOException e) {
                     System.out.println("Disconnected from server.");
@@ -59,7 +66,6 @@ public class Client {
             }
 
         } catch (IOException e) {
-
             System.out.println("Connection closed.");
             e.printStackTrace();
         }

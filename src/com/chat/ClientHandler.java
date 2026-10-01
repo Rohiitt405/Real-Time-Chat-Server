@@ -9,7 +9,9 @@ import java.net.Socket;
 public class ClientHandler implements Runnable {
     private final Socket clientSocket;
     private final ChatRoom chatRoom;
+
     private PrintWriter writer;
+    private String username;
 
     public ClientHandler(Socket clientSocket, ChatRoom chatRoom) {
         this.clientSocket = clientSocket;
@@ -25,21 +27,38 @@ public class ClientHandler implements Runnable {
         ) {
             writer = new PrintWriter(clientSocket.getOutputStream(), true);
 
+            writer.println("Enter your username:");
+            username = reader.readLine();
+
+            if (username == null || username.isBlank()) {
+                return;
+            }
+
             chatRoom.addClient(this);
+            chatRoom.broadcast(username + " joined the chat.", this);
 
             String message;
 
-            while((message = reader.readLine()) != null) {
-                System.out.println("Message: " + message);
-                chatRoom.broadcast(message, this);
+            while ((message = reader.readLine()) != null) {
+                if (message.equalsIgnoreCase("exit")) {
+                    break;
+                }
+
+                String formattedMessage = username + ": " + message;
+
+                System.out.println(formattedMessage);
+                chatRoom.broadcast(formattedMessage, this);
             }
 
         } catch (IOException e) {
-            System.out.println("Client disconnected.");
+            System.out.println(username + "disconnected unexpectedly.");
 
         } finally {
             chatRoom.removeClient(this);
 
+            if(username != null) {
+                chatRoom.broadcast(username + " left the chat.", this);
+            }
             try {
                 clientSocket.close();
             } catch (IOException e) {
