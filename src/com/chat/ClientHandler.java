@@ -41,8 +41,13 @@ public class ClientHandler implements Runnable {
 
             String message;
             while ((message = reader.readLine()) != null) {
-                if (message.equalsIgnoreCase("exit")) {
-                    break;
+                if (message.startsWith("/")) {
+                    boolean shouldExit = handleCommand(message);
+
+                    if (shouldExit) {
+                        break;
+                    }
+                    continue;
                 }
 
                 String formattedMessage = username + ": " + message;
@@ -55,7 +60,7 @@ public class ClientHandler implements Runnable {
             System.out.println(username + " disconnected unexpectedly.");
 
         } finally {
-            if(joined) {
+            if (joined) {
                 chatRoom.removeClient(this);
                 chatRoom.broadcast(username + " left the chat.", this);
             }
@@ -67,7 +72,60 @@ public class ClientHandler implements Runnable {
         }
     }
 
+    private boolean handleCommand(String message) {
+        String[] parts = message.split(" ", 3);
+        String command = parts[0].toLowerCase();
+
+        switch (command) {
+            case "/users":
+                writer.println("Online users:");
+                writer.println(chatRoom.getOnlineUsers());
+                break;
+
+            case "/pm":
+                if (parts.length < 3) {
+                    writer.println("Usage: /pm username message");
+                    break;
+                }
+
+                String targetUsername = parts[1];
+                String privateMessage = parts[2];
+
+                ClientHandler target = chatRoom.getClientByUsername(targetUsername);
+
+                if (target == null) {
+                    writer.println("User '" + targetUsername + "' is not online.");
+                    break;
+                }
+
+                target.sendMessage(
+                        "[Private] " + username + " -> " +
+                                targetUsername + ": " + privateMessage
+                );
+
+                writer.println(
+                        "[Private] You -> " +
+                                targetUsername + ": " + privateMessage
+                );
+                break;
+
+            case "/exit":
+                writer.println("GoodBye!");
+                return true;
+
+            default:
+                writer.println("Unknown command: " + command);
+                writer.println("Available commands: /users, /pm, /exit");
+        }
+
+        return false;
+    }
+
     public void sendMessage(String message) {
         writer.println(message);
+    }
+
+    public String getUsername() {
+        return username;
     }
 }
