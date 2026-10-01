@@ -12,6 +12,7 @@ public class ClientHandler implements Runnable {
 
     private PrintWriter writer;
     private String username;
+    private boolean joined = false;
 
     public ClientHandler(Socket clientSocket, ChatRoom chatRoom) {
         this.clientSocket = clientSocket;
@@ -23,7 +24,7 @@ public class ClientHandler implements Runnable {
         try (
                 BufferedReader reader = new BufferedReader(
                         new InputStreamReader(clientSocket.getInputStream())
-                );
+                )
         ) {
             writer = new PrintWriter(clientSocket.getOutputStream(), true);
 
@@ -35,10 +36,10 @@ public class ClientHandler implements Runnable {
             }
 
             chatRoom.addClient(this);
+            joined = true;
             chatRoom.broadcast(username + " joined the chat.", this);
 
             String message;
-
             while ((message = reader.readLine()) != null) {
                 if (message.equalsIgnoreCase("exit")) {
                     break;
@@ -51,12 +52,11 @@ public class ClientHandler implements Runnable {
             }
 
         } catch (IOException e) {
-            System.out.println(username + "disconnected unexpectedly.");
+            System.out.println(username + " disconnected unexpectedly.");
 
         } finally {
-            chatRoom.removeClient(this);
-
-            if(username != null) {
+            if(joined) {
+                chatRoom.removeClient(this);
                 chatRoom.broadcast(username + " left the chat.", this);
             }
             try {
