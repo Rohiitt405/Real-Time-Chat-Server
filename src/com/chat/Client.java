@@ -17,35 +17,44 @@ public class Client {
                 BufferedReader serverReader = new BufferedReader(
                         new InputStreamReader(socket.getInputStream())
                 );
-
                 PrintWriter writer = new PrintWriter(
                         socket.getOutputStream(),
                         true
                 );
-
                 BufferedReader consoleReader = new BufferedReader(
                         new InputStreamReader(System.in)
                 )
         ) {
-
             System.out.println("Connected to server!");
 
-            String usernamePrompt = serverReader.readLine();
-            System.out.println(usernamePrompt);
+            String message;
 
-            String username = consoleReader.readLine();
-            writer.println(username);
+            while ((message = serverReader.readLine()) != null) {
+                System.out.println(message);
 
-            System.out.println("You can now start chatting.");
-            System.out.println("Type 'exit' to leave.");
+                if (message.equals("Enter your username:")) {
+                    String username = consoleReader.readLine();
+                    writer.println(username);
+                    continue;
+                }
+
+                if (message.equals("Enter your display name:")) {
+                    String displayName = consoleReader.readLine();
+                    writer.println(displayName);
+                    continue;
+                }
+
+                if (message.equals("You can now start chatting.")) {
+                    break;
+                }
+            }
 
             Thread receiverThread = new Thread(() -> {
-
                 try {
-                    String message;
+                    String serverMessage;
 
-                    while ((message = serverReader.readLine()) != null) {
-                        System.out.println("\n" + message);
+                    while ((serverMessage = serverReader.readLine()) != null) {
+                        System.out.println("\n" + serverMessage);
                         System.out.print("> ");
                     }
                 } catch (IOException e) {
@@ -55,10 +64,9 @@ public class Client {
 
             receiverThread.start();
 
-            String message;
-
             while ((message = consoleReader.readLine()) != null) {
                 if (message.equalsIgnoreCase("exit")) {
+                    writer.println("/exit");
                     break;
                 }
 

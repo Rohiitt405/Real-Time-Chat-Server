@@ -12,6 +12,7 @@ public class ClientHandler implements Runnable {
 
     private PrintWriter writer;
     private String username;
+    private String displayName;
     private boolean joined = false;
 
     public ClientHandler(Socket clientSocket, ChatRoom chatRoom) {
@@ -27,28 +28,50 @@ public class ClientHandler implements Runnable {
                 )
         ) {
             writer = new PrintWriter(clientSocket.getOutputStream(), true);
-
             writer.println("Enter your username:");
-            username = reader.readLine();
 
-            if (username == null || username.isBlank()) {
+            while (true) {
+                username = reader.readLine();
+
+                if (username == null || username.isBlank()) {
+                    return;
+                }
+
+                if (!username.matches("[a-zA-Z0-9_]+")) {
+                    writer.println("Username can only contain letters, numbers and underscore.");
+                    writer.println("Enter your username:");
+                    continue;
+                }
+
+                break;
+            }
+
+            writer.println("Enter your display name:");
+            displayName = reader.readLine();
+
+            if (displayName == null || displayName.isBlank()) {
                 return;
             }
 
-            while(true) {
-                if(chatRoom.registerClient(this, username)) {
-                    break;
-                }
-
+            while (!chatRoom.registerClient(this, username)) {
                 writer.println("Username already taken. Enter another username:");
                 username = reader.readLine();
 
                 if (username == null || username.isBlank()) {
                     return;
                 }
+                if (!username.matches("[a-zA-Z0-9_]+")) {
+                    writer.println("Username can only contain letters, numbers and underscore.");
+                    writer.println("Enter your username:");
+                    continue;
+                }
             }
             joined = true;
-            chatRoom.broadcast(username + " joined the chat.", this);
+
+            writer.println("You can now start chatting.");
+            writer.println("Type 'exit' to leave.");
+
+            chatRoom.broadcast(displayName + " joined the chat.", this);
 
             String message;
             while ((message = reader.readLine()) != null) {
@@ -61,7 +84,7 @@ public class ClientHandler implements Runnable {
                     continue;
                 }
 
-                String formattedMessage = username + ": " + message;
+                String formattedMessage = displayName + ": " + message;
 
                 System.out.println(formattedMessage);
                 chatRoom.broadcast(formattedMessage, this);
@@ -73,7 +96,7 @@ public class ClientHandler implements Runnable {
         } finally {
             if (joined) {
                 chatRoom.removeClient(this);
-                chatRoom.broadcast(username + " left the chat.", this);
+                chatRoom.broadcast(displayName + " left the chat.", this);
             }
             try {
                 clientSocket.close();
@@ -110,13 +133,11 @@ public class ClientHandler implements Runnable {
                 }
 
                 target.sendMessage(
-                        "[Private] " + username + " -> " +
-                                targetUsername + ": " + privateMessage
+                        "[Private] " + displayName + " -> " + target.getDisplayName() + ": " + privateMessage
                 );
 
                 writer.println(
-                        "[Private] You -> " +
-                                targetUsername + ": " + privateMessage
+                        "[Private] You -> " + target.getDisplayName() + ": " + privateMessage
                 );
                 break;
 
@@ -138,5 +159,9 @@ public class ClientHandler implements Runnable {
 
     public String getUsername() {
         return username;
+    }
+
+    public String getDisplayName() {
+        return displayName;
     }
 }
