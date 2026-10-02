@@ -107,10 +107,18 @@ public class ClientHandler implements Runnable {
     }
 
     private boolean handleCommand(String message) {
-        String[] parts = message.split(" ", 3);
+        String[] parts = message.split("\\s+", 3);
         String command = parts[0].toLowerCase();
 
         switch (command) {
+            case "/help":
+                writer.println("Available commands:");
+                writer.println("/help  - Show available commands");
+                writer.println("/users  - Show online users");
+                writer.println("/pm username message  - Send a private message");
+                writer.println("/exit  - Leave the chat");
+                break;
+
             case "/users":
                 writer.println("Online users:");
                 writer.println(chatRoom.getOnlineUsers());
@@ -147,7 +155,7 @@ public class ClientHandler implements Runnable {
 
             default:
                 writer.println("Unknown command: " + command);
-                writer.println("Available commands: /users, /pm, /exit");
+                writer.println("Use /help to see available commands.");
         }
 
         return false;
