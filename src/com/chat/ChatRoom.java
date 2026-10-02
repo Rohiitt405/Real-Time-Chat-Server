@@ -7,9 +7,16 @@ import java.util.stream.Collectors;
 public class ChatRoom {
     private final Set<ClientHandler> clients = ConcurrentHashMap.newKeySet();
 
-    public void addClient(ClientHandler client) {
+    public synchronized boolean registerClient(ClientHandler client, String username) {
+        for (ClientHandler existingClient : clients) {
+            if(existingClient.getUsername().equalsIgnoreCase(username)) {
+                return false;
+            }
+        }
         clients.add(client);
         System.out.println("Client joined. Total Clients: " + clients.size());
+
+        return true;
     }
 
     public void removeClient(ClientHandler client) {
@@ -23,6 +30,15 @@ public class ChatRoom {
                 client.sendMessage(message);
             }
         }
+    }
+
+    public boolean isUsernameTaken(String username) {
+        for (ClientHandler client : clients) {
+            if (client.getUsername().equalsIgnoreCase(username)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public ClientHandler getClientByUsername(String username) {

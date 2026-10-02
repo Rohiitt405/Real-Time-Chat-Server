@@ -35,7 +35,18 @@ public class ClientHandler implements Runnable {
                 return;
             }
 
-            chatRoom.addClient(this);
+            while(true) {
+                if(chatRoom.registerClient(this, username)) {
+                    break;
+                }
+
+                writer.println("Username already taken. Enter another username:");
+                username = reader.readLine();
+
+                if (username == null || username.isBlank()) {
+                    return;
+                }
+            }
             joined = true;
             chatRoom.broadcast(username + " joined the chat.", this);
 
