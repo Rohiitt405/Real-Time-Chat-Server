@@ -7,12 +7,7 @@ import java.util.stream.Collectors;
 public class ChatRoom {
     private final Set<ClientHandler> clients = ConcurrentHashMap.newKeySet();
 
-    public synchronized boolean registerClient(ClientHandler client, String username) {
-        for (ClientHandler existingClient : clients) {
-            if(existingClient.getUsername().equalsIgnoreCase(username)) {
-                return false;
-            }
-        }
+    public synchronized boolean addClient(ClientHandler client) {
         clients.add(client);
         System.out.println("Client joined. Total Clients: " + clients.size());
 

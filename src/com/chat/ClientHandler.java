@@ -1,5 +1,8 @@
 package com.chat;
 
+import com.chat.model.User;
+import com.chat.service.UserService;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -9,15 +12,20 @@ import java.net.Socket;
 public class ClientHandler implements Runnable {
     private final Socket clientSocket;
     private final ChatRoom chatRoom;
+    private final UserService userService;
 
     private PrintWriter writer;
-    private String username;
-    private String displayName;
+    private User user;
     private boolean joined = false;
 
-    public ClientHandler(Socket clientSocket, ChatRoom chatRoom) {
+    public ClientHandler(
+            Socket clientSocket,
+            ChatRoom chatRoom,
+            UserService userService
+    ) {
         this.clientSocket = clientSocket;
         this.chatRoom = chatRoom;
+        this.userService = userService;
     }
 
     @Override
@@ -30,6 +38,7 @@ public class ClientHandler implements Runnable {
             writer = new PrintWriter(clientSocket.getOutputStream(), true);
             writer.println("Enter your username:");
 
+            String username;
             while (true) {
                 username = reader.readLine();
 
@@ -47,13 +56,15 @@ public class ClientHandler implements Runnable {
             }
 
             writer.println("Enter your display name:");
-            displayName = reader.readLine();
+            String displayName = reader.readLine();
 
             if (displayName == null || displayName.isBlank()) {
                 return;
             }
 
-            while (!chatRoom.registerClient(this, username)) {
+            user = new User(username, displayName);
+
+            while (!userService.register(user)) {
                 writer.println("Username already taken. Enter another username:");
                 username = reader.readLine();
 
@@ -65,13 +76,16 @@ public class ClientHandler implements Runnable {
                     writer.println("Enter your username:");
                     continue;
                 }
+                user = new User(username, displayName);
             }
+
+            chatRoom.addClient(this);
             joined = true;
 
             writer.println("You can now start chatting.");
             writer.println("Type 'exit' to leave.");
 
-            chatRoom.broadcast(displayName + " joined the chat.", this);
+            chatRoom.broadcast(user.getDisplayName() + " joined the chat.", this);
 
             String message;
             while ((message = reader.readLine()) != null) {
@@ -84,19 +98,24 @@ public class ClientHandler implements Runnable {
                     continue;
                 }
 
-                String formattedMessage = displayName + ": " + message;
+                String formattedMessage = user.getDisplayName() + ": " + message;
 
                 System.out.println(formattedMessage);
                 chatRoom.broadcast(formattedMessage, this);
             }
 
         } catch (IOException e) {
-            System.out.println(username + " disconnected unexpectedly.");
+            System.out.println(
+                    user != null
+                            ? user.getUsername() + " disconnected unexpectedly."
+                            : "Client disconnected unexpectedly."
+            );
 
         } finally {
             if (joined) {
                 chatRoom.removeClient(this);
-                chatRoom.broadcast(displayName + " left the chat.", this);
+                chatRoom.broadcast(user.getDisplayName() + " left the chat.", this
+                );
             }
             try {
                 clientSocket.close();
@@ -107,7 +126,7 @@ public class ClientHandler implements Runnable {
     }
 
     private boolean handleCommand(String message) {
-        String[] parts = message.split("\\s+", 3);
+        String[] parts = message.trim().split("\\s+", 3);
         String command = parts[0].toLowerCase();
 
         switch (command) {
@@ -141,11 +160,14 @@ public class ClientHandler implements Runnable {
                 }
 
                 target.sendMessage(
-                        "[Private] " + displayName + " -> " + target.getDisplayName() + ": " + privateMessage
+                        "[Private] " + user.getDisplayName() +
+                                " -> " + target.getDisplayName() +
+                                ": " + privateMessage
                 );
 
                 writer.println(
-                        "[Private] You -> " + target.getDisplayName() + ": " + privateMessage
+                        "[Private] You -> " + target.getDisplayName() +
+                                ": " + privateMessage
                 );
                 break;
 
@@ -166,10 +188,10 @@ public class ClientHandler implements Runnable {
     }
 
     public String getUsername() {
-        return username;
+        return user.getUsername();
     }
 
     public String getDisplayName() {
-        return displayName;
+        return user.getDisplayName();
     }
 }
