@@ -1,6 +1,7 @@
 package com.chat;
 
 import com.chat.service.UserService;
+import com.chat.service.AuthService;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -17,12 +18,13 @@ public class Server {
 
             ChatRoom chatRoom = new ChatRoom();
             UserService userService = new UserService();
+            AuthService authService = new AuthService(userService);
 
             while (true) {
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("Client connected!");
 
-                ClientHandler clientHandler = new ClientHandler(clientSocket, chatRoom, userService);
+                ClientHandler clientHandler = new ClientHandler(clientSocket, chatRoom, authService);
 
                 Thread thread = new Thread(clientHandler);
                 thread.start();

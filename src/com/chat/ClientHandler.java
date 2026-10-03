@@ -1,7 +1,7 @@
 package com.chat;
 
 import com.chat.model.User;
-import com.chat.service.UserService;
+import com.chat.service.AuthService;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -12,7 +12,7 @@ import java.net.Socket;
 public class ClientHandler implements Runnable {
     private final Socket clientSocket;
     private final ChatRoom chatRoom;
-    private final UserService userService;
+    private final AuthService authService;
 
     private PrintWriter writer;
     private User user;
@@ -21,11 +21,11 @@ public class ClientHandler implements Runnable {
     public ClientHandler(
             Socket clientSocket,
             ChatRoom chatRoom,
-            UserService userService
+            AuthService authService
     ) {
         this.clientSocket = clientSocket;
         this.chatRoom = chatRoom;
-        this.userService = userService;
+        this.authService = authService;
     }
 
     @Override
@@ -36,52 +36,15 @@ public class ClientHandler implements Runnable {
                 )
         ) {
             writer = new PrintWriter(clientSocket.getOutputStream(), true);
-            writer.println("Enter your username:");
 
-            String username;
-            while (true) {
-                username = reader.readLine();
-
-                if (username == null || username.isBlank()) {
-                    return;
-                }
-
-                if (!username.matches("[a-zA-Z0-9_]+")) {
-                    writer.println("Username can only contain letters, numbers and underscore.");
-                    writer.println("Enter your username:");
-                    continue;
-                }
-
-                break;
-            }
-
-            writer.println("Enter your display name:");
-            String displayName = reader.readLine();
-
-            if (displayName == null || displayName.isBlank()) {
+            if (!authenticate(reader)) {
                 return;
-            }
-
-            user = new User(username, displayName);
-
-            while (!userService.register(user)) {
-                writer.println("Username already taken. Enter another username:");
-                username = reader.readLine();
-
-                if (username == null || username.isBlank()) {
-                    return;
-                }
-                if (!username.matches("[a-zA-Z0-9_]+")) {
-                    writer.println("Username can only contain letters, numbers and underscore.");
-                    writer.println("Enter your username:");
-                    continue;
-                }
-                user = new User(username, displayName);
             }
 
             chatRoom.addClient(this);
             joined = true;
 
+            writer.println("Authentication successful.");
             writer.println("You can now start chatting.");
             writer.println("Type 'exit' to leave.");
 
@@ -123,6 +86,104 @@ public class ClientHandler implements Runnable {
                 e.printStackTrace();
             }
         }
+    }
+
+    private boolean authenticate(BufferedReader reader) throws IOException {
+        while (true) {
+            writer.println("Choose an option:");
+            writer.println("1. Register");
+            writer.println("2. Login");
+            writer.println("Enter your choice:");
+
+            String choice = reader.readLine();
+
+            if (choice == null) {
+                return false;
+            }
+
+            switch (choice.trim()) {
+                case "1":
+                    if (register(reader)) {
+                        return true;
+                    }
+                    break;
+                case "2":
+                    if (login(reader)) {
+                        return true;
+                    }
+                    break;
+
+                default:
+                    writer.println("Invalid choice.");
+            }
+        }
+    }
+
+    private boolean register(BufferedReader reader) throws IOException {
+        writer.println("Enter your username:");
+        String username = reader.readLine();
+
+        if (username == null || username.isBlank()) {
+            return false;
+        }
+
+        if (!username.matches("[a-zA-Z0-9_]+")) {
+            writer.println("Username can only contain letter, number and underscore.");
+            return false;
+        }
+
+        writer.println("Enter your display name:");
+        String displayName = reader.readLine();
+
+        if(displayName == null || displayName.isBlank()) {
+            writer.println("Diplay name cannot be empty.");
+            return false;
+        }
+
+        writer.println("Enter your password:");
+        String password = reader.readLine();
+
+        if(password == null || password.isBlank()) {
+            writer.println("Password cannot be empty.");
+            return false;
+        }
+
+        boolean registered = authService.register(
+                username,
+                displayName,
+                password
+        );
+
+        if(!registered) {
+            writer.println("Username already taken.");
+            return false;
+        }
+
+        user = authService.login(username, password);
+        return user != null;
+    }
+
+    private boolean login(BufferedReader reader) throws IOException {
+        writer.println("Enter your username:");
+        String username = reader.readLine();
+
+        if(username == null || username.isBlank()) {
+            return false;
+        }
+
+        writer.println("Enter your password:");
+        String password = reader.readLine();
+
+        if(password == null || password.isBlank()) {
+            return false;
+        }
+
+        user = authService.login(username, password);
+        if(user == null) {
+            writer.println("Invalid username and password.");
+            return false;
+        }
+        return true;
     }
 
     private boolean handleCommand(String message) {

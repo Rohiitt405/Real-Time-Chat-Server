@@ -7,7 +7,6 @@ import java.io.PrintWriter;
 import java.net.Socket;
 
 public class Client {
-
     private static final String HOST = "localhost";
     private static final int PORT = 5000;
 
@@ -32,6 +31,12 @@ public class Client {
             while ((message = serverReader.readLine()) != null) {
                 System.out.println(message);
 
+                if (message.equals("Enter your choice:")) {
+                    String choice = consoleReader.readLine();
+                    writer.println(choice);
+                    continue;
+                }
+
                 if (message.equals("Enter your username:")) {
                     String username = consoleReader.readLine();
                     writer.println(username);
@@ -41,6 +46,12 @@ public class Client {
                 if (message.equals("Enter your display name:")) {
                     String displayName = consoleReader.readLine();
                     writer.println(displayName);
+                    continue;
+                }
+
+                if (message.equals("Enter your password:")) {
+                    String password = consoleReader.readLine();
+                    writer.println(password);
                     continue;
                 }
 
